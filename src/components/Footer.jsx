@@ -17,13 +17,6 @@ export default function Footer({ onNavigateAdmin }) {
               &copy; 2025 Bhavya Agarwal. All rights reserved.
             </p>
             <span className="text-ink-muted/40">•</span>
-            <button
-              onClick={onNavigateAdmin}
-              className="font-mono text-[11px] text-ink-muted hover:text-ink-blue transition-colors cursor-pointer"
-              title="Admin Portal"
-            >
-              [ 🔒 Admin ]
-            </button>
           </div>
         </div>
 
