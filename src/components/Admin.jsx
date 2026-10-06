@@ -8,7 +8,9 @@ import {
   saveStoredAchievements,
   resetAllDataToDefault,
   verifyAdminPassword,
-  setCustomAdminPassword
+  setCustomAdminPassword,
+  validateAndCleanBackup,
+  sanitizeUrl
 } from '../data/storage';
 
 const POPULAR_TAGS = [
@@ -24,10 +26,11 @@ export default function Admin({ onNavigateHome }) {
   const [passwordInput, setPasswordInput] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [authError, setAuthError] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
   const [activeTab, setActiveTab] = useState('projects'); // 'projects' | 'achievements' | 'milestones' | 'settings'
   const [notification, setNotification] = useState(null);
 
-  // Data state
+  // Data states
   const [projects, setProjects] = useState([]);
   const [milestones, setMilestones] = useState([]);
   const [achievements, setAchievements] = useState([]);
@@ -57,8 +60,8 @@ export default function Admin({ onNavigateHome }) {
   const [confirmPasswordVal, setConfirmPasswordVal] = useState('');
   const [rawJsonPaste, setRawJsonPaste] = useState('');
 
+  // On mount: do not restore session so password is required on reload
   useEffect(() => {
-    // Do not restore session from storage so user must re-enter password on every page reload
     setIsAuthenticated(false);
     loadAllData();
   }, []);
@@ -76,14 +79,28 @@ export default function Admin({ onNavigateHome }) {
     }, 3500);
   };
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    if (verifyAdminPassword(passwordInput)) {
-      setIsAuthenticated(true);
-      setAuthError('');
-      showToast('Logged in successfully!');
-    } else {
-      setAuthError('Incorrect master passcode. Access denied.');
+    if (!passwordInput.trim()) {
+      setAuthError('Please enter the passcode.');
+      return;
+    }
+    setIsVerifying(true);
+    setAuthError('');
+
+    try {
+      const isValid = await verifyAdminPassword(passwordInput);
+      if (isValid) {
+        setIsAuthenticated(true);
+        setAuthError('');
+        showToast('Authorized successfully!');
+      } else {
+        setAuthError('Incorrect master passcode. Access denied.');
+      }
+    } catch (err) {
+      setAuthError('Verification error.');
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -120,7 +137,6 @@ export default function Admin({ onNavigateHome }) {
     });
   }, [projects, selectedCategoryFilter, searchQuery]);
 
-  // Unique categories list for filter
   const allCategories = useMemo(() => {
     const set = new Set();
     projects.forEach(p => {
@@ -182,6 +198,8 @@ export default function Admin({ onNavigateHome }) {
 
     const projectToSave = {
       ...editingProject,
+      githubUrl: sanitizeUrl(editingProject.githubUrl),
+      liveUrl: sanitizeUrl(editingProject.liveUrl),
       highlights: cleanedHighlights.length > 0 ? cleanedHighlights : ['Custom feature highlight'],
       tags: cleanedTags.length > 0 ? cleanedTags : ['Software']
     };
@@ -371,22 +389,23 @@ export default function Admin({ onNavigateHome }) {
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
-        const parsed = JSON.parse(event.target.result);
-        if (parsed.projects && Array.isArray(parsed.projects)) {
-          setProjects(parsed.projects);
-          saveStoredProjects(parsed.projects);
+        const rawParsed = JSON.parse(event.target.result);
+        const cleaned = validateAndCleanBackup(rawParsed);
+        if (cleaned.projects) {
+          setProjects(cleaned.projects);
+          saveStoredProjects(cleaned.projects);
         }
-        if (parsed.milestones && Array.isArray(parsed.milestones)) {
-          setMilestones(parsed.milestones);
-          saveStoredMilestones(parsed.milestones);
+        if (cleaned.milestones) {
+          setMilestones(cleaned.milestones);
+          saveStoredMilestones(cleaned.milestones);
         }
-        if (parsed.achievements && Array.isArray(parsed.achievements)) {
-          setAchievements(parsed.achievements);
-          saveStoredAchievements(parsed.achievements);
+        if (cleaned.achievements) {
+          setAchievements(cleaned.achievements);
+          saveStoredAchievements(cleaned.achievements);
         }
-        showToast('Backup restored successfully!');
+        showToast('Validated backup restored successfully!');
       } catch (err) {
-        alert('Invalid JSON backup file format.');
+        alert('Invalid or corrupted JSON backup: ' + err.message);
       }
     };
     reader.readAsText(file);
@@ -394,27 +413,28 @@ export default function Admin({ onNavigateHome }) {
 
   const handlePasteJSON = () => {
     try {
-      const parsed = JSON.parse(rawJsonPaste);
-      if (parsed.projects && Array.isArray(parsed.projects)) {
-        setProjects(parsed.projects);
-        saveStoredProjects(parsed.projects);
+      const rawParsed = JSON.parse(rawJsonPaste);
+      const cleaned = validateAndCleanBackup(rawParsed);
+      if (cleaned.projects) {
+        setProjects(cleaned.projects);
+        saveStoredProjects(cleaned.projects);
       }
-      if (parsed.milestones && Array.isArray(parsed.milestones)) {
-        setMilestones(parsed.milestones);
-        saveStoredMilestones(parsed.milestones);
+      if (cleaned.milestones) {
+        setMilestones(cleaned.milestones);
+        saveStoredMilestones(cleaned.milestones);
       }
-      if (parsed.achievements && Array.isArray(parsed.achievements)) {
-        setAchievements(parsed.achievements);
-        saveStoredAchievements(parsed.achievements);
+      if (cleaned.achievements) {
+        setAchievements(cleaned.achievements);
+        saveStoredAchievements(cleaned.achievements);
       }
       setRawJsonPaste('');
-      showToast('JSON applied successfully!');
+      showToast('Validated JSON applied successfully!');
     } catch (err) {
-      alert('Could not parse JSON. Please check the syntax.');
+      alert('Could not parse JSON. Check syntax: ' + err.message);
     }
   };
 
-  const handleChangePassword = (e) => {
+  const handleChangePassword = async (e) => {
     e.preventDefault();
     if (!newPasswordVal.trim()) {
       alert('Please enter a new password');
@@ -424,10 +444,10 @@ export default function Admin({ onNavigateHome }) {
       alert('Passwords do not match');
       return;
     }
-    setCustomAdminPassword(newPasswordVal);
+    await setCustomAdminPassword(newPasswordVal);
     setNewPasswordVal('');
     setConfirmPasswordVal('');
-    showToast('Custom admin password updated successfully!');
+    showToast('Custom admin password hashed & saved securely!');
   };
 
   const handleResetDefaults = () => {
@@ -436,6 +456,13 @@ export default function Admin({ onNavigateHome }) {
       loadAllData();
       showToast('Portfolio data restored to default', 'info');
     }
+  };
+
+  // Copy code for global static deployment
+  const handleCopyProjectsCode = () => {
+    const code = `export const projectsData = ${JSON.stringify(projects, null, 2)};\n`;
+    navigator.clipboard.writeText(code);
+    showToast('Copied projectsData.js code to clipboard!');
   };
 
   // -------------------------------------------------------------
@@ -466,13 +493,13 @@ export default function Admin({ onNavigateHome }) {
           <div className="text-center mb-6 pt-1">
             <div className="inline-flex items-center gap-1.5 font-mono text-[11px] font-bold text-ink-red tracking-widest uppercase mb-1">
               <span className="w-2 h-2 rounded-full bg-ink-red animate-ping" />
-              <span>SECURITY GATE // AUTH_REQ</span>
+              <span>AUTHENTICATION REQUIRED</span>
             </div>
             <h1 className="font-typewriter text-3xl font-bold text-ink-blue tracking-tight">
               Admin Control Center
             </h1>
             <p className="font-mono text-xs text-ink-muted mt-1.5">
-              Portfolio Content Management System
+              Secure Portfolio Management Gate
             </p>
           </div>
 
@@ -512,9 +539,10 @@ export default function Admin({ onNavigateHome }) {
 
             <button
               type="submit"
-              className="font-mono text-sm font-bold px-6 py-3 bg-ink-blue text-white border-2 border-ink-blue shadow-btn-ink hover:bg-ink-dark hover:border-ink-dark hover:shadow-btn-ink-hover hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0.5 active:translate-y-0.5 transition-all cursor-pointer mt-1"
+              disabled={isVerifying}
+              className="font-mono text-sm font-bold px-6 py-3 bg-ink-blue text-white border-2 border-ink-blue shadow-btn-ink hover:bg-ink-dark hover:border-ink-dark hover:shadow-btn-ink-hover hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0.5 active:translate-y-0.5 transition-all cursor-pointer mt-1 disabled:opacity-50"
             >
-              Authorize &amp; Launch &rarr;
+              {isVerifying ? 'Verifying SHA-256...' : 'Authorize & Launch →'}
             </button>
           </form>
         </div>
@@ -659,7 +687,7 @@ export default function Admin({ onNavigateHome }) {
                 : 'bg-white text-ink-blue border-ink-blue/30 hover:border-ink-blue'
             }`}
           >
-            ⚙ Settings &amp; Security
+            ⚙ Settings &amp; Global Deployment
           </button>
         </div>
 
@@ -705,7 +733,7 @@ export default function Admin({ onNavigateHome }) {
                     {searchQuery && (
                       <button
                         onClick={() => setSearchQuery('')}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink-red text-xs font-bold"
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink-red text-xs font-bold cursor-pointer"
                       >
                         ✕
                       </button>
@@ -745,7 +773,7 @@ export default function Admin({ onNavigateHome }) {
                   <button
                     onClick={() => setViewMode('grid')}
                     title="Grid View"
-                    className={`font-mono text-xs font-bold px-2 py-1 rounded-[2px] transition-all ${
+                    className={`font-mono text-xs font-bold px-2 py-1 rounded-[2px] transition-all cursor-pointer ${
                       viewMode === 'grid' ? 'bg-ink-blue text-white' : 'text-ink-blue hover:bg-slate-200'
                     }`}
                   >
@@ -754,7 +782,7 @@ export default function Admin({ onNavigateHome }) {
                   <button
                     onClick={() => setViewMode('list')}
                     title="List View"
-                    className={`font-mono text-xs font-bold px-2 py-1 rounded-[2px] transition-all ${
+                    className={`font-mono text-xs font-bold px-2 py-1 rounded-[2px] transition-all cursor-pointer ${
                       viewMode === 'list' ? 'bg-ink-blue text-white' : 'text-ink-blue hover:bg-slate-200'
                     }`}
                   >
@@ -774,17 +802,17 @@ export default function Admin({ onNavigateHome }) {
                 </p>
                 <button
                   onClick={handleOpenAddProject}
-                  className="mt-4 font-mono text-xs font-bold px-4 py-2 bg-ink-blue text-white rounded-[2px]"
+                  className="mt-4 font-mono text-xs font-bold px-4 py-2 bg-ink-blue text-white rounded-[2px] cursor-pointer"
                 >
                   + Add New Project
                 </button>
               </div>
             )}
 
-            {/* Projects Render: GRID or LIST */}
+            {/* Projects Render */}
             {viewMode === 'grid' ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {filteredProjects.map((proj, idx) => {
+                {filteredProjects.map((proj) => {
                   const globalIdx = projects.findIndex(p => p.id === proj.id);
                   return (
                     <div
@@ -1165,13 +1193,45 @@ export default function Admin({ onNavigateHome }) {
         {/* --------------------------------------------------------- */}
         {activeTab === 'settings' && (
           <div className="flex flex-col gap-8">
+            
+            {/* Global Static Deployment Assistant */}
+            <div className="bg-white border-2 border-ink-blue rounded-[3px] p-7 shadow-sm">
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="font-typewriter text-xl font-bold text-ink-blue">
+                  🚀 Global Production Deployment Sync
+                </h2>
+                <span className="font-mono text-xs font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-[2px]">
+                  STATIC DEPLOYMENT READY
+                </span>
+              </div>
+              <p className="font-mono text-xs text-ink-muted mb-4">
+                Edits made in this admin console are saved in your browser storage. To make your project additions visible to <strong>all visitors worldwide on Vercel</strong>, click below to copy the generated static file code into your repo:
+              </p>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  onClick={handleCopyProjectsCode}
+                  className="font-mono text-xs font-bold px-4 py-2.5 bg-ink-blue text-white rounded-[2px] hover:bg-ink-dark cursor-pointer shadow-xs flex items-center gap-2"
+                >
+                  <span>📋</span>
+                  <span>Copy Code for `src/data/projectsData.js`</span>
+                </button>
+                <button
+                  onClick={handleExportJSON}
+                  className="font-mono text-xs font-bold px-4 py-2.5 bg-slate-100 border border-ink-blue/30 text-ink-blue rounded-[2px] hover:bg-slate-200 cursor-pointer shadow-xs"
+                >
+                  Download .JSON Data
+                </button>
+              </div>
+            </div>
+
             {/* Backup & Restore Section */}
             <div className="bg-white border border-ink-blue/25 rounded-[3px] p-7 shadow-sm">
               <h2 className="font-typewriter text-xl font-bold text-ink-blue mb-1">
                 Data Management &amp; Portable Backup
               </h2>
               <p className="font-mono text-xs text-ink-muted mb-6">
-                All changes are automatically saved to your browser storage. You can export a JSON backup file or import one anytime.
+                Export verified JSON backups or upload previously saved data files. All imports are validated for schema safety.
               </p>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -1200,7 +1260,7 @@ export default function Admin({ onNavigateHome }) {
                       2. Upload Backup File
                     </h3>
                     <p className="font-mono text-xs text-ink-muted mb-4">
-                      Select a previous .json backup file to restore all content.
+                      Select a previous .json backup file to restore all content safely.
                     </p>
                   </div>
                   <label className="font-mono text-xs font-bold px-4 py-2.5 bg-slate-100 border border-ink-blue/30 text-ink-blue rounded-[2px] hover:bg-slate-200 transition-all text-center cursor-pointer shadow-xs">
@@ -1236,7 +1296,7 @@ export default function Admin({ onNavigateHome }) {
               {/* Direct JSON Paste Box */}
               <div className="mt-8 pt-6 border-t border-dashed border-ink-blue/20">
                 <h3 className="font-typewriter font-bold text-ink-blue text-sm mb-2">
-                  Direct JSON Paste / Importer
+                  Direct JSON Paste / Importer (Validated)
                 </h3>
                 <textarea
                   rows={3}
@@ -1250,7 +1310,7 @@ export default function Admin({ onNavigateHome }) {
                   disabled={!rawJsonPaste.trim()}
                   className="mt-2 font-mono text-xs font-bold px-4 py-2 bg-ink-blue text-white rounded-[2px] disabled:opacity-40 cursor-pointer"
                 >
-                  Apply Pasted JSON
+                  Apply &amp; Validate JSON
                 </button>
               </div>
             </div>
@@ -1258,10 +1318,10 @@ export default function Admin({ onNavigateHome }) {
             {/* Change Password Card */}
             <div className="bg-white border border-ink-blue/25 rounded-[3px] p-7 shadow-sm">
               <h2 className="font-typewriter text-xl font-bold text-ink-blue mb-1">
-                Admin Security &amp; Passcode
+                Admin Security &amp; SHA-256 Passcode
               </h2>
               <p className="font-mono text-xs text-ink-muted mb-6">
-                Set a custom password for accessing the `/adminbhavya` portal.
+                Set a custom password for accessing `/adminbhavya`. Passwords are cryptographically hashed using SHA-256 before storage.
               </p>
 
               <form onSubmit={handleChangePassword} className="max-w-md flex flex-col gap-4">
@@ -1295,7 +1355,7 @@ export default function Admin({ onNavigateHome }) {
                   type="submit"
                   className="font-mono text-xs font-bold px-5 py-2.5 bg-ink-blue text-white rounded-[2px] hover:bg-ink-dark cursor-pointer self-start"
                 >
-                  Update Admin Passcode
+                  Hash &amp; Save Passcode
                 </button>
               </form>
             </div>
@@ -1427,7 +1487,7 @@ export default function Admin({ onNavigateHome }) {
                         <button
                           type="button"
                           onClick={() => handleRemoveTag(t)}
-                          className="hover:text-red-500 font-bold ml-0.5"
+                          className="hover:text-red-500 font-bold ml-0.5 cursor-pointer"
                         >
                           ✕
                         </button>
@@ -1456,7 +1516,7 @@ export default function Admin({ onNavigateHome }) {
                     <button
                       type="button"
                       onClick={() => handleAddTag(tagInput)}
-                      className="px-3 py-2 bg-ink-blue text-white rounded-[2px] font-bold"
+                      className="px-3 py-2 bg-ink-blue text-white rounded-[2px] font-bold cursor-pointer"
                     >
                       + Add
                     </button>
@@ -1470,7 +1530,7 @@ export default function Admin({ onNavigateHome }) {
                         key={pt}
                         type="button"
                         onClick={() => handleAddTag(pt)}
-                        className="text-[10px] bg-slate-100 hover:bg-ink-blue hover:text-white text-ink-dark px-1.5 py-0.5 rounded-[2px] border border-ink-blue/15 transition-all"
+                        className="text-[10px] bg-slate-100 hover:bg-ink-blue hover:text-white text-ink-dark px-1.5 py-0.5 rounded-[2px] border border-ink-blue/15 transition-all cursor-pointer"
                       >
                         +{pt}
                       </button>
@@ -1516,7 +1576,7 @@ export default function Admin({ onNavigateHome }) {
                             const copy = editingProject.highlights.filter((_, idx) => idx !== i);
                             setEditingProject({ ...editingProject, highlights: copy });
                           }}
-                          className="text-red-500 font-bold px-2 py-1 hover:bg-red-50 rounded-[2px]"
+                          className="text-red-500 font-bold px-2 py-1 hover:bg-red-50 rounded-[2px] cursor-pointer"
                         >
                           ✕
                         </button>
