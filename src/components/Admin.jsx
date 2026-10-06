@@ -27,7 +27,7 @@ export default function Admin({ onNavigateHome }) {
   const [activeTab, setActiveTab] = useState('projects'); // 'projects' | 'achievements' | 'milestones' | 'settings'
   const [notification, setNotification] = useState(null);
 
-  // Data states
+  // Data state
   const [projects, setProjects] = useState([]);
   const [milestones, setMilestones] = useState([]);
   const [achievements, setAchievements] = useState([]);
