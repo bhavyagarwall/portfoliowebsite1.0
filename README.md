@@ -1,110 +1,117 @@
-# Bhavya Agarwal — Notebook Portfolio Website 📓
+# Bhavya Agarwal — Notebook Portfolio Website 📓 (React + Tailwind CSS)
 
-A handcrafted personal portfolio website styled as an authentic engineering notebook with graph paper, typewriter ink stamps, washi tape accents, and handwritten annotations.
+A modern, component-driven personal portfolio website built with **React 19**, **Tailwind CSS**, and **Vite**, handcrafted in the authentic aesthetic of an engineering notebook with graph paper, typewriter ink stamps, washi tape accents, and handwritten annotations.
 
 ---
 
-## 🎨 Design Overview
+## 🎨 Design & Tech Stack
 
-- **Aesthetic**: Vintage engineering / lab graph paper with blue ink stamps (`#18417e`) and handwritten notes.
+- **Framework**: React 19 + Vite (lightning-fast HMR and build times)
+- **Styling**: Tailwind CSS with custom notebook theme extensions
 - **Typography**: 
-  - `Special Elite` (Google Fonts): Vintage stamped typewriter font for headlines and name stamps.
-  - `Courier Prime` (Google Fonts): Clean, classic monospace font for text and tags.
-  - `Caveat` (Google Fonts): Casual handwritten font for margin scribbles and notes.
-- **Key Visual Elements**:
-  - Grid background with subtle 24px grid lines.
-  - Polaroid photo frame with semi-transparent blue washi tape and doodle sparks.
-  - Lab notebook cards with taped corners and hover effects.
-  - **Interactive 3D Flip Cards** in Milestones & Honors (clean heading on front, details & metrics reveal on hover/tap).
-  - Bracket-styled typewriter navigation `[HOME]`, `[PROJECTS]`, `[SKILLS]`, `[HONORS]`, `[CONTACT]`.
-  - Responsive mobile drawer navigation.
-  - Automatic `.heic` format conversion support for iPhone photos.
+  - `Special Elite` (Google Fonts): Vintage stamped typewriter font for headlines and stamps.
+  - `Courier Prime` (Google Fonts): Monospace font for typed text, tags, and code.
+  - `Caveat` (Google Fonts): Handwritten font for margin scribbles and notes.
+- **Key Visual Features**:
+  - Continuous 24px graph paper grid background.
+  - Polaroid photo frame with tilted washi tape and doodle sparks.
+  - Category-filtered project lab cards (`[ALL]`, `[AI / ML]`, `[FULL STACK]`, `[ALGO & TOOLS]`).
+  - Stamped technical skill folders.
+  - **Interactive 3D Flip Cards** in Milestones & Honors (headings on front, details & metrics reveal on hover/tap).
+  - Notebook tear-off contact memo with copy-to-clipboard email and working note submission.
+  - Automatic `.heic` format conversion support (displays iPhone photos without manual conversion).
 
 ---
 
-## 📁 File Structure
+## 📁 Project Structure
 
 ```
 portfoliowebsite1.0/
-├── index.html           # Main single-page scrollable structure
-├── style.css            # Notebook & graph paper styles, 3D flip card styles
-├── script.js            # Smooth scroll, project filters, flip cards, contact form
-├── README.md            # Documentation & instructions
-└── assets/
-    ├── profile.heic     # Your profile photo (supports .heic, .jpg, .png)
-    ├── profile.jpg      # Your profile photo
-    ├── profile-sample.jpg # Cropped sample portrait from the mockup
-    └── Bhavya_Agarwal_Resume.pdf # Your downloadable resume PDF
+├── public/                      # Static assets served at root
+│   ├── profile.heic            # Your profile photo (supports .heic, .jpg, .png)
+│   ├── profile.jpg             # Default portrait
+│   ├── profile-sample.jpg      # Sample sketched portrait from mockup
+│   └── Bhavya_Agarwal_Resume.pdf # Downloadable resume PDF
+├── src/
+│   ├── components/             # Modular React components
+│   │   ├── Navbar.jsx          # Header with bracket navigation & sketch divider
+│   │   ├── Hero.jsx            # Polaroid, typewriter titles, bio & socials
+│   │   ├── Projects.jsx        # Category filters & lab notebook cards
+│   │   ├── Skills.jsx          # Technical toolkit folder tabs
+│   │   ├── Milestones.jsx      # 3D Flip cards (hover/tap)
+│   │   ├── Contact.jsx         # Contact memo sheet & message sender
+│   │   └── Footer.jsx          # Signature & back-to-top
+│   ├── data/                   # Clean content data files (easy to edit!)
+│   │   ├── projectsData.js     # Your projects, tech stacks & links
+│   │   ├── skillsData.js       # Technical skills by category
+│   │   └── milestonesData.js   # Honors & competitive coding highlights
+│   ├── App.jsx                 # App layout & notebook separators
+│   ├── main.jsx                # React DOM entry point
+│   └── index.css               # Tailwind directives & grid pattern
+├── index.html                  # HTML template with Google Fonts
+├── vite.config.js              # Vite configuration
+├── tailwind.config.js          # Custom colors, fonts & shadows
+├── postcss.config.js           # PostCSS configuration
+└── package.json                # Scripts & dependencies
 ```
 
 ---
 
-## 🚀 How to Run Locally
+## 🚀 Getting Started
 
-Because this is built with clean vanilla HTML, CSS, and JavaScript, there are **no heavy build tools or npm installs required**!
-
-### Option 1: Just Open in Browser
-Double-click `index.html` to open it directly in Chrome, Edge, Safari, or Firefox.
-
-### Option 2: Run a Local Dev Server
-In the project directory, run:
+### 1. Start the Development Server
 ```bash
-# Using Python
-python -m http.server 3000
-
-# Or using Node
-npx serve .
+npm run dev
 ```
-Then visit `http://localhost:3000` in your browser.
+Visit `http://localhost:3000` to view your live portfolio with instant Hot Module Replacement (HMR).
+
+### 2. Build for Production
+```bash
+npm run build
+```
+Creates an optimized, minified production build in the `dist/` directory.
+
+### 3. Preview Production Build
+```bash
+npm run preview
+```
 
 ---
 
 ## ✏️ How to Customize
 
-### 1. Replacing the Profile Picture
-- Place your photo inside the `assets/` folder named `profile.jpg` (or `.png`).
-- The CSS automatically applies the polaroid frame, washi tape, and tilt angle!
+All content is cleanly separated into data files in `src/data/`:
 
-### 2. Updating Your Resume
-- Replace `assets/Bhavya_Agarwal_Resume.pdf` with your actual resume PDF.
-
-### 3. Adding Your Social & Project Links
-- Open `index.html`:
-  - Search for `https://github.com` and replace with your GitHub handle.
-  - Search for `https://linkedin.com` and replace with your LinkedIn profile URL.
-  - Search for `https://leetcode.com` and replace with your LeetCode profile URL.
-  - Search for `bhavya.agarwal@example.com` and replace with your email address.
-
-### 4. Adding or Editing Projects
-In `index.html`, find the `<section class="section projects-section" id="projects">`. Each project is enclosed in:
-```html
-<div class="project-card" data-category="ai-ml">
-  ...
-</div>
-```
-Categories available for filtering:
-- `data-category="ai-ml"`: AI / Machine Learning
-- `data-category="fullstack"`: Web Development / Full-Stack
-- `data-category="systems"`: Algorithms, Systems, & Tools
+1. **Adding / Modifying Projects**:
+   - Open `src/data/projectsData.js` and edit or add project objects.
+2. **Updating Skills**:
+   - Open `src/data/skillsData.js` and add skills to any category.
+3. **Updating Milestones & Honors**:
+   - Open `src/data/milestonesData.js` to change titles, descriptions, or metrics on the flip cards.
+4. **Updating Your Photo**:
+   - Replace `public/profile.heic` or `public/profile.jpg` with your own photo.
+5. **Updating Your Resume**:
+   - Replace `public/Bhavya_Agarwal_Resume.pdf` with your actual resume PDF.
+6. **Updating Social Links**:
+   - Edit the URLs in `src/components/Hero.jsx` and `src/components/Contact.jsx`.
 
 ---
 
-## 🌐 Deploying to GitHub Pages (Free Hosting)
+## 🌐 Deploying to GitHub Pages or Vercel
 
-1. Commit your changes:
-   ```bash
-   git add .
-   git commit -m "Initial portfolio release"
-   ```
-2. Push to your GitHub repository:
-   ```bash
-   git remote add origin https://github.com/<your-username>/<repo-name>.git
-   git branch -M main
-   git push -u origin main
-   ```
-3. In your GitHub repository:
-   - Go to **Settings** > **Pages**.
-   - Under **Source**, choose **Deploy from a branch**.
-   - Select `main` branch and `/ (root)` folder.
-   - Click **Save**. Your site will be live at `https://<your-username>.github.io/<repo-name>/`!
+### Option A: Vercel / Netlify (Recommended)
+1. Push your repository to GitHub.
+2. Import the repo into [Vercel](https://vercel.com) or [Netlify](https://netlify.com).
+3. The build command (`npm run build`) and output folder (`dist`) are detected automatically.
 
+### Option B: GitHub Pages
+1. Install `gh-pages`:
+   ```bash
+   npm i -D gh-pages
+   ```
+2. In `vite.config.js`, add `base: '/<your-repo-name>/'` (if deploying to a subpath).
+3. Add to `package.json` scripts:
+   ```json
+   "deploy": "vite build && gh-pages -d dist"
+   ```
+4. Run `npm run deploy`.

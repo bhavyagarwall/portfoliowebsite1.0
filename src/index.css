@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: #f8f9fa;
+  }
+}
+
+/* Notebook Graph Paper Grid Background */
+.bg-notebook {
+  background-color: #f8f9fa;
+  background-image: 
+    linear-gradient(rgba(65, 115, 175, 0.11) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(65, 115, 175, 0.11) 1px, transparent 1px);
+  background-size: 24px 24px;
+  background-position: -1px -1px;
+}
+
