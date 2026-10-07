@@ -84,7 +84,7 @@ export default function Milestones() {
                     {item.title}
                   </h3>
                   <span className="font-handwritten text-sm text-ink-muted opacity-80 mt-1">
-                    [ hover to flip ↺ ]
+                    []
                   </span>
                 </div>
 

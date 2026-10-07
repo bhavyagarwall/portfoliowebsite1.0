@@ -144,7 +144,7 @@ export default function Hero() {
           <div className="flex items-center gap-2 mt-1">
             {/* GitHub */}
             <a
-              href="https://github.com"
+              href="https://github.com/bhavyagarwall"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 font-mono text-ink-blue font-bold text-base hover:text-ink-dark hover:-translate-y-0.5 transition-all p-1"
@@ -159,7 +159,7 @@ export default function Hero() {
 
             {/* LinkedIn */}
             <a
-              href="https://linkedin.com"
+              href="https://www.linkedin.com/in/bhavyaagarwal24/"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 font-mono text-ink-blue font-bold text-base hover:text-ink-dark hover:-translate-y-0.5 transition-all p-1"
@@ -174,7 +174,7 @@ export default function Hero() {
 
             {/* LeetCode */}
             <a
-              href="https://leetcode.com"
+              href="https://leetcode.com/u/bhavyaagarwall/"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 font-mono text-ink-blue font-bold text-base hover:text-ink-dark hover:-translate-y-0.5 transition-all p-1"
@@ -189,7 +189,7 @@ export default function Hero() {
 
             {/* Email */}
             <a
-              href="mailto:bhavya.agarwal@example.com"
+              href="mailto:bhavya.agarwal.career@gmail.com"
               className="inline-flex items-center gap-1 font-mono text-ink-blue font-bold text-base hover:text-ink-dark hover:-translate-y-0.5 transition-all p-1"
               title="Send Email"
             >

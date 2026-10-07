@@ -13,7 +13,7 @@ export default function Contact() {
 
   const copyEmail = async () => {
     try {
-      await navigator.clipboard.writeText('bhavya.agarwal@example.com');
+      await navigator.clipboard.writeText('bhavya.agarwal.career@gmail.com');
       setCopied(true);
       setTimeout(() => setCopied(false), 2200);
     } catch (e) {
@@ -111,10 +111,9 @@ export default function Contact() {
             {/* Socials */}
             <div className="flex flex-wrap items-center gap-3 font-mono text-sm">
               <span className="font-bold text-ink-muted">NETWORKS:</span>
-              <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="font-bold text-ink-blue hover:text-ink-red transition-colors">[GitHub]</a>
-              <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="font-bold text-ink-blue hover:text-ink-red transition-colors">[LinkedIn]</a>
-              <a href="https://leetcode.com" target="_blank" rel="noopener noreferrer" className="font-bold text-ink-blue hover:text-ink-red transition-colors">[LeetCode]</a>
-              <a href="https://x.com" target="_blank" rel="noopener noreferrer" className="font-bold text-ink-blue hover:text-ink-red transition-colors">[Twitter/X]</a>
+              <a href="https://github.com/bhavyagarwall" target="_blank" rel="noopener noreferrer" className="font-bold text-ink-blue hover:text-ink-red transition-colors">[GitHub]</a>
+              <a href="https://www.linkedin.com/in/bhavyaagarwal24/" target="_blank" rel="noopener noreferrer" className="font-bold text-ink-blue hover:text-ink-red transition-colors">[LinkedIn]</a>
+              <a href="https://leetcode.com/u/bhavyaagarwall" target="_blank" rel="noopener noreferrer" className="font-bold text-ink-blue hover:text-ink-red transition-colors">[LeetCode]</a>
             </div>
           </div>
 
