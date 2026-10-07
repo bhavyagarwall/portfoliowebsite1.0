@@ -14,7 +14,7 @@ export default function Footer({ onNavigateAdmin }) {
           </p>
           <div className="flex items-center gap-3">
             <p className="font-mono text-xs text-ink-muted">
-              &copy; 2025 Bhavya Agarwal. All rights reserved.
+              &copy; 
             </p>
             <span className="text-ink-muted/40">•</span>
           </div>

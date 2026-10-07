@@ -1,6 +1,7 @@
 import { projectsData } from './projectsData';
 import { milestonesData } from './milestonesData';
 import { initialAchievementsData } from './achievementsData';
+import { supabase } from '../lib/supabaseClient';
 
 const STORAGE_KEYS = {
   PROJECTS: 'bhavya_portfolio_projects_v1',
@@ -9,7 +10,7 @@ const STORAGE_KEYS = {
   PASSWORD_HASH: 'bhavya_portfolio_admin_pwd_hash_v1',
 };
 
-// SHA-256 precomputed hashes of default authorized passcodes:
+// SHA-256 precomputed hashes of authorized passcodes:
 // "bhavya2025" -> 5d0a68d0bb41d3b248a39bfe87e7ebfe26ec7e0fc218b065476a666989445207
 // "adminbhavya" -> 4e4f51e06a58eb7bc8516087fb68393526ae7eb0a01fa266858e37976e5d59ce
 // "admin123" -> 240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9
@@ -60,7 +61,95 @@ export function subscribeDataChanges(callback) {
   };
 }
 
-// Password verification via cryptographic SHA-256 comparison
+// -------------------------------------------------------------
+// SUPABASE CLOUD DATABASE SYNC & REALTIME
+// -------------------------------------------------------------
+let isCloudSyncInitialized = false;
+
+export async function initCloudSync() {
+  if (typeof window === 'undefined' || isCloudSyncInitialized) return;
+  isCloudSyncInitialized = true;
+
+  try {
+    // 1. Fetch current global records from Supabase
+    const { data, error } = await supabase
+      .from('portfolio_content')
+      .select('key, data');
+
+    if (!error && data && Array.isArray(data)) {
+      let hasUpdates = false;
+
+      data.forEach((row) => {
+        if (row.key === 'projects' && Array.isArray(row.data) && row.data.length > 0) {
+          localStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(row.data));
+          hasUpdates = true;
+        } else if (row.key === 'milestones' && Array.isArray(row.data) && row.data.length > 0) {
+          localStorage.setItem(STORAGE_KEYS.MILESTONES, JSON.stringify(row.data));
+          hasUpdates = true;
+        } else if (row.key === 'achievements' && Array.isArray(row.data) && row.data.length > 0) {
+          localStorage.setItem(STORAGE_KEYS.ACHIEVEMENTS, JSON.stringify(row.data));
+          hasUpdates = true;
+        }
+      });
+
+      if (hasUpdates) {
+        notifyDataChanged();
+      }
+
+      // If Supabase is empty, seed initial data to cloud
+      if (data.length === 0) {
+        seedInitialDataToCloud();
+      }
+    } else if (error) {
+      console.warn('Supabase initial fetch notice:', error.message);
+    }
+
+    // 2. Realtime Subscription: Update all visitors globally when changes occur
+    supabase
+      .channel('portfolio_realtime_sync')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'portfolio_content' },
+        (payload) => {
+          if (payload.new && payload.new.key && payload.new.data) {
+            const { key, data: newData } = payload.new;
+            if (key === 'projects') {
+              localStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(newData));
+            } else if (key === 'milestones') {
+              localStorage.setItem(STORAGE_KEYS.MILESTONES, JSON.stringify(newData));
+            } else if (key === 'achievements') {
+              localStorage.setItem(STORAGE_KEYS.ACHIEVEMENTS, JSON.stringify(newData));
+            }
+            notifyDataChanged();
+          }
+        }
+      )
+      .subscribe();
+
+  } catch (err) {
+    console.warn('Cloud sync offline or table pending setup:', err);
+  }
+}
+
+async function seedInitialDataToCloud() {
+  try {
+    const currentProjects = getStoredProjects();
+    const currentMilestones = getStoredMilestones();
+    const currentAchievements = getStoredAchievements();
+
+    await supabase.from('portfolio_content').upsert([
+      { key: 'projects', data: currentProjects },
+      { key: 'milestones', data: currentMilestones },
+      { key: 'achievements', data: currentAchievements }
+    ]);
+  } catch (e) {
+    console.warn('Could not seed initial data to cloud:', e);
+  }
+}
+
+// -------------------------------------------------------------
+// PASSWORD SECURITY
+// -------------------------------------------------------------
 export async function verifyAdminPassword(inputPwd) {
   if (typeof window === 'undefined' || !inputPwd) return false;
   try {
@@ -74,7 +163,6 @@ export async function verifyAdminPassword(inputPwd) {
   }
 }
 
-// Set custom password (stored only as a SHA-256 hash)
 export async function setCustomAdminPassword(newPwd) {
   if (typeof window === 'undefined') return;
   if (!newPwd || !newPwd.trim()) {
@@ -85,7 +173,9 @@ export async function setCustomAdminPassword(newPwd) {
   }
 }
 
-// Schema Validator for Backup JSON files
+// -------------------------------------------------------------
+// SCHEMA VALIDATOR FOR BACKUPS
+// -------------------------------------------------------------
 export function validateAndCleanBackup(parsed) {
   if (!parsed || typeof parsed !== 'object') {
     throw new Error('Backup data is not a valid object.');
@@ -135,7 +225,9 @@ export function validateAndCleanBackup(parsed) {
   return result;
 }
 
-// Projects
+// -------------------------------------------------------------
+// GET & SAVE DATA (SAVED TO BOTH LOCALSTORAGE & SUPABASE CLOUD)
+// -------------------------------------------------------------
 export function getStoredProjects() {
   if (typeof window === 'undefined') return projectsData;
   try {
@@ -149,21 +241,31 @@ export function getStoredProjects() {
   }
 }
 
-export function saveStoredProjects(projects) {
+export async function saveStoredProjects(projects) {
   try {
     const cleaned = projects.map(p => ({
       ...p,
       githubUrl: sanitizeUrl(p.githubUrl),
       liveUrl: sanitizeUrl(p.liveUrl)
     }));
+    
+    // 1. Instant local update
     localStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(cleaned));
     notifyDataChanged();
+
+    // 2. Global Cloud Sync to Supabase
+    const { error } = await supabase
+      .from('portfolio_content')
+      .upsert({ key: 'projects', data: cleaned });
+
+    if (error) {
+      console.warn('Supabase projects save notice:', error.message);
+    }
   } catch (e) {
-    console.error('Failed to save projects to localStorage', e);
+    console.error('Failed to save projects', e);
   }
 }
 
-// Milestones Flip Cards
 export function getStoredMilestones() {
   if (typeof window === 'undefined') return milestonesData;
   try {
@@ -177,16 +279,23 @@ export function getStoredMilestones() {
   }
 }
 
-export function saveStoredMilestones(milestones) {
+export async function saveStoredMilestones(milestones) {
   try {
     localStorage.setItem(STORAGE_KEYS.MILESTONES, JSON.stringify(milestones));
     notifyDataChanged();
+
+    const { error } = await supabase
+      .from('portfolio_content')
+      .upsert({ key: 'milestones', data: milestones });
+
+    if (error) {
+      console.warn('Supabase milestones save notice:', error.message);
+    }
   } catch (e) {
-    console.error('Failed to save milestones to localStorage', e);
+    console.error('Failed to save milestones', e);
   }
 }
 
-// Achievements Bullet Points
 export function getStoredAchievements() {
   if (typeof window === 'undefined') return initialAchievementsData;
   try {
@@ -200,20 +309,37 @@ export function getStoredAchievements() {
   }
 }
 
-export function saveStoredAchievements(achievements) {
+export async function saveStoredAchievements(achievements) {
   try {
     localStorage.setItem(STORAGE_KEYS.ACHIEVEMENTS, JSON.stringify(achievements));
     notifyDataChanged();
+
+    const { error } = await supabase
+      .from('portfolio_content')
+      .upsert({ key: 'achievements', data: achievements });
+
+    if (error) {
+      console.warn('Supabase achievements save notice:', error.message);
+    }
   } catch (e) {
-    console.error('Failed to save achievements to localStorage', e);
+    console.error('Failed to save achievements', e);
   }
 }
 
-// Reset all
-export function resetAllDataToDefault() {
+export async function resetAllDataToDefault() {
   localStorage.removeItem(STORAGE_KEYS.PROJECTS);
   localStorage.removeItem(STORAGE_KEYS.MILESTONES);
   localStorage.removeItem(STORAGE_KEYS.ACHIEVEMENTS);
   localStorage.removeItem(STORAGE_KEYS.PASSWORD_HASH);
   notifyDataChanged();
+
+  try {
+    await supabase.from('portfolio_content').upsert([
+      { key: 'projects', data: projectsData },
+      { key: 'milestones', data: milestonesData },
+      { key: 'achievements', data: initialAchievementsData }
+    ]);
+  } catch (e) {
+    console.warn('Could not reset Supabase data:', e);
+  }
 }

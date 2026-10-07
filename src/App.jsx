@@ -7,6 +7,7 @@ import Milestones from './components/Milestones';
 import Contact from './components/Contact';
 import Footer from './components/Footer';
 import Admin from './components/Admin';
+import { initCloudSync } from './data/storage';
 
 // Clean Notebook Separator with Washi tape accent
 function NotebookSeparator() {
@@ -25,6 +26,9 @@ export default function App() {
   );
 
   useEffect(() => {
+    // Start background sync with Supabase cloud database
+    initCloudSync();
+
     const handlePopState = () => {
       setCurrentPath(window.location.pathname);
     };

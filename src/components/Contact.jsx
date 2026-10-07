@@ -33,7 +33,7 @@ export default function Contact() {
     setTimeout(() => {
       setFeedback(`Note recorded! Thanks, ${formState.name}. Opening mail draft... ✓`);
 
-      const mailtoUrl = `mailto:bhavya.agarwal@example.com?subject=${encodeURIComponent(
+      const mailtoUrl = `mailto:bhavya.agarwal.career@gmail.com?subject=${encodeURIComponent(
         formState.subject || 'Portfolio Inquiry'
       )}&body=${encodeURIComponent(
         `Hi Bhavya,\n\n${formState.message}\n\nFrom: ${formState.name} (${formState.email})`
@@ -84,10 +84,10 @@ export default function Contact() {
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-bold text-ink-blue w-20">EMAIL:</span>
                 <a 
-                  href="mailto:bhavya.agarwal@example.com"
+                  href="mailto:bhavya.agarwal.career@gmail.com"
                   className="font-semibold underline decoration-ink-blue/30 hover:decoration-ink-blue hover:text-ink-blue transition-colors"
                 >
-                  bhavya.agarwal@example.com
+                  bhavya.agarwal.career@gmail.com
                 </a>
                 <button
                   onClick={copyEmail}
